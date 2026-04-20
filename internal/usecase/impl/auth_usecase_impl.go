@@ -224,6 +224,8 @@ func (u *authUseCase) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		UserID:    user.ID,
 		TokenHash: hashRefresh,
 		ExpiresAt: time.Now().Add(refreshTTL),
+		UserAgent: req.UserAgent,
+		IP:        req.IP,
 	}
 	if err := u.refreshTokenRepo.Create(ctx, rt, nil); err != nil {
 		u.log.WithError(err).Error("login: save refresh token")
@@ -297,8 +299,65 @@ func generateRefreshToken() (raw, hash string, err error) {
 	return
 }
 
-func (u *authUseCase) Refresh(ctx context.Context, refreshToken string) (*model.AuthResponse, error) {
-	return nil, ErrNotImplemented
+func (u *authUseCase) Refresh(ctx context.Context, rawToken string) (*model.AuthResponse, error) {
+	// Hash raw token to look up in DB
+	sum := sha256.Sum256([]byte(rawToken))
+	tokenHash := hex.EncodeToString(sum[:])
+
+	rt, err := u.refreshTokenRepo.FindByTokenHash(ctx, tokenHash)
+	if err != nil {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	if rt.RevokedAt != nil || time.Now().After(rt.ExpiresAt) {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	user, err := u.userRepo.FindByID(ctx, rt.UserID)
+	if err != nil {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	// Revoke old token
+	if err := u.refreshTokenRepo.RevokeByID(ctx, rt.ID); err != nil {
+		u.log.WithError(err).Error("refresh: revoke old token")
+		return nil, ErrInternalSaveToken
+	}
+
+	// Issue new access + refresh token pair
+	accessToken, err := u.generateAccessToken(user)
+	if err != nil {
+		u.log.WithError(err).Error("refresh: generate access token")
+		return nil, ErrInternalSaveToken
+	}
+
+	newRaw, newHash, err := generateRefreshToken()
+	if err != nil {
+		u.log.WithError(err).Error("refresh: generate refresh token")
+		return nil, ErrInternalSaveToken
+	}
+
+	refreshTTL, err := time.ParseDuration(u.jwtCfg.RefreshTTL)
+	if err != nil {
+		refreshTTL = 7 * 24 * time.Hour
+	}
+
+	newRT := &entity.RefreshToken{
+		UserID:    user.ID,
+		TokenHash: newHash,
+		ExpiresAt: time.Now().Add(refreshTTL),
+		UserAgent: rt.UserAgent,
+		IP:        rt.IP,
+	}
+	if err := u.refreshTokenRepo.Create(ctx, newRT, nil); err != nil {
+		u.log.WithError(err).Error("refresh: save new token")
+		return nil, ErrInternalSaveToken
+	}
+
+	return &model.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: newRaw,
+	}, nil
 }
 
 func (u *authUseCase) ForgotPassword(ctx context.Context, req *model.ForgotPasswordRequest) error {

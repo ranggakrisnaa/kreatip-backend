@@ -59,6 +59,8 @@ func (ctrl *AuthController) Login(c *fiber.Ctx) error {
 	if err := c.BodyParser(req); err != nil {
 		return fiber.ErrBadRequest
 	}
+	req.UserAgent = c.Get("User-Agent")
+	req.IP = c.IP()
 
 	resp, err := ctrl.UseCase.Login(c.UserContext(), req)
 	if err != nil {
@@ -68,9 +70,27 @@ func (ctrl *AuthController) Login(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(model.WebResponse[*model.AuthResponse]{Data: resp})
 }
 
-// POST /api/v1/auth/refresh
+// Refresh godoc
+// @Summary      Refresh access token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      model.RefreshTokenRequest  true  "Refresh token"
+// @Success      200   {object}  model.WebResponse[model.AuthResponse]
+// @Failure      401   {object}  model.ErrorResponse  "Invalid or expired refresh token"
+// @Router       /auth/refresh [post]
 func (ctrl *AuthController) Refresh(c *fiber.Ctx) error {
-	return fiber.ErrNotImplemented
+	req := new(model.RefreshTokenRequest)
+	if err := c.BodyParser(req); err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	resp, err := ctrl.UseCase.Refresh(c.UserContext(), req.RefreshToken)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(model.WebResponse[*model.AuthResponse]{Data: resp})
 }
 
 // VerifyEmail godoc
