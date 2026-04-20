@@ -1,32 +1,26 @@
 package route
 
-import "github.com/gofiber/fiber/v2"
+import (
+	handler "github.com/kreatip/kreatip-backend/internal/delivery/http"
+	"github.com/gofiber/fiber/v2"
+)
 
-// TODO: inject controllers and register routes
-func Setup(app *fiber.App) {
+type Controllers struct {
+	Auth *handler.AuthController
+}
+
+func Setup(app *fiber.App, ctrl *Controllers) {
 	v1 := app.Group("/api/v1")
 
-	// auth
+	// auth (public)
 	auth := v1.Group("/auth")
-	_ = auth
+	auth.Post("/register", ctrl.Auth.Register)
+	auth.Post("/login", ctrl.Auth.Login)
+	auth.Post("/refresh", ctrl.Auth.Refresh)
+	auth.Get("/verify-email", ctrl.Auth.VerifyEmail)
+	auth.Post("/resend-verification", ctrl.Auth.ResendVerification)
+	auth.Post("/forgot-password", ctrl.Auth.ForgotPassword)
+	auth.Post("/reset-password", ctrl.Auth.ResetPassword)
 
-	// creator profile
-	me := v1.Group("/me")
-	_ = me
-
-	// public
-	creators := v1.Group("/creators")
-	_ = creators
-
-	// donations (public)
-	donations := v1.Group("/donations")
-	_ = donations
-
-	// webhooks (public, no JWT)
-	webhooks := v1.Group("/webhooks")
-	_ = webhooks
-
-	// admin
-	admin := v1.Group("/admin")
-	_ = admin
+	// TODO: add other controller groups as implemented
 }

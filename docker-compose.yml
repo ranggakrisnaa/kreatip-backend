@@ -29,13 +29,45 @@ services:
       timeout: 3s
       retries: 5
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: kreatip-mailhog
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: kreatip-mailpit
     ports:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI
 
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: kreatip-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: kreatip-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:

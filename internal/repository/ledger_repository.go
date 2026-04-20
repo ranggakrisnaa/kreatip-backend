@@ -35,7 +35,8 @@ func (r *ledgerRepository) SumByWalletAndAccount(ctx context.Context, walletID s
 		Debits  int64
 	}
 	err := r.DB.WithContext(ctx).Model(&entity.LedgerEntry{}).
-		Select("SUM(CASE WHEN direction = 'credit' THEN amount ELSE 0 END) as credits, SUM(CASE WHEN direction = 'debit' THEN amount ELSE 0 END) as debits").
+		Select("SUM(CASE WHEN direction = ? THEN amount ELSE 0 END) as credits, SUM(CASE WHEN direction = ? THEN amount ELSE 0 END) as debits",
+			entity.LedgerCredit, entity.LedgerDebit).
 		Where("wallet_id = ? AND account = ?", walletID, account).
 		Scan(&result).Error
 	if err != nil {

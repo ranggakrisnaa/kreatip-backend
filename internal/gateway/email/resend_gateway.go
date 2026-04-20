@@ -4,9 +4,17 @@ import (
 	"context"
 	"errors"
 
-	"github.com/kreatip/kreatip-backend/internal/config"
 	"github.com/sirupsen/logrus"
 )
+
+// Config holds email gateway settings — defined here to avoid importing internal/config.
+type Config struct {
+	Provider string
+	APIKey   string
+	From     string
+	SMTPHost string
+	SMTPPort int
+}
 
 type SendRequest struct {
 	To      []string
@@ -19,16 +27,25 @@ type Gateway interface {
 }
 
 type resendGateway struct {
-	cfg *config.EmailConfig
+	cfg *Config
 	log *logrus.Logger
 }
 
-func NewResendGateway(cfg *config.EmailConfig, log *logrus.Logger) Gateway {
+func NewResendGateway(cfg *Config, log *logrus.Logger) Gateway {
 	return &resendGateway{cfg: cfg, log: log}
 }
 
+// NewGateway returns the right implementation based on Provider field.
+// "resend" → Resend API, anything else → SMTP (MailHog in dev).
+func NewGateway(cfg *Config, log *logrus.Logger) Gateway {
+	if cfg.Provider == "resend" {
+		return NewResendGateway(cfg, log)
+	}
+	return NewSMTPGateway(cfg, log)
+}
+
 func (g *resendGateway) Send(ctx context.Context, req *SendRequest) error {
-	// TODO: call Resend API or fallback to SMTP (MailHog in dev)
-	g.log.WithField("to", req.To).Info("sending email")
-	return errors.New("not implemented")
+	// TODO: implement Resend HTTP API call
+	g.log.WithField("to", req.To).Info("resend: sending email")
+	return errors.New("resend gateway not implemented")
 }

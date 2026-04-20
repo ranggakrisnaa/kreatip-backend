@@ -17,12 +17,12 @@ type Pagination struct {
 	Total      int64  `json:"total,omitempty"`
 }
 
-// ErrorResponse is returned when validation or business errors occur.
+// ErrorResponse is returned on all 4xx/5xx responses.
 type ErrorResponse struct {
-	Errors []FieldError `json:"errors"`
+	Errors []ErrorItem `json:"errors"`
 }
 
-type FieldError struct {
+type ErrorItem struct {
 	Field   string `json:"field,omitempty"`
 	Message string `json:"message"`
 }

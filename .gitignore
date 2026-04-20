@@ -33,6 +33,11 @@ Thumbs.db
 # Build artifacts
 dist/
 
+# Swagger generated — regenerate with: make swag
+docs/docs.go
+docs/swagger.json
+docs/swagger.yaml
+
 # Logs
 *.log
 logs/

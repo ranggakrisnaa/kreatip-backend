@@ -7,6 +7,9 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/kreatip/kreatip-backend/internal/config"
+	consumer "github.com/kreatip/kreatip-backend/internal/delivery/messaging"
+	emailgw "github.com/kreatip/kreatip-backend/internal/gateway/email"
+	"github.com/kreatip/kreatip-backend/internal/model"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -40,9 +43,17 @@ func main() {
 		},
 	)
 
+	emailCfg := &emailgw.Config{
+		Provider: cfg.Email.Provider,
+		APIKey:   cfg.Email.APIKey,
+		From:     cfg.Email.From,
+		SMTPHost: cfg.Email.SMTPHost,
+		SMTPPort: cfg.Email.SMTPPort,
+	}
+	emailConsumer := consumer.NewEmailConsumer(log, emailgw.NewGateway(emailCfg, log))
+
 	mux := asynq.NewServeMux()
-	// TODO: register task handlers here
-	// mux.HandleFunc(tasks.TypeEmailReceipt, handlers.HandleEmailReceipt)
+	mux.HandleFunc(model.TypeEmailVerification, emailConsumer.HandleVerification)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

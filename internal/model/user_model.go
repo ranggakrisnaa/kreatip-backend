@@ -6,12 +6,18 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email"    validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email     string `json:"email"      validate:"required,email"`
+	Password  string `json:"password"   validate:"required"`
+	UserAgent string `json:"-" swaggerignore:"true"`
+	IP        string `json:"-" swaggerignore:"true"`
 }
 
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+type ResendVerificationRequest struct {
+	Email string `json:"email" validate:"required,email"`
 }
 
 type ForgotPasswordRequest struct {
