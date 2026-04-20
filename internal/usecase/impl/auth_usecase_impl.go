@@ -11,24 +11,29 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
-	gatewaymsg "github.com/kreatip/kreatip-backend/internal/gateway/messaging"
+	"github.com/hibiken/asynq"
 	"github.com/kreatip/kreatip-backend/internal/entity"
+	gatewaymsg "github.com/kreatip/kreatip-backend/internal/gateway/messaging"
 	"github.com/kreatip/kreatip-backend/internal/model"
 	"github.com/kreatip/kreatip-backend/internal/model/converter"
 	"github.com/kreatip/kreatip-backend/internal/repository"
 	"github.com/kreatip/kreatip-backend/internal/usecase"
-	"github.com/hibiken/asynq"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-// JWTConfig holds token generation settings for the auth usecase.
 type JWTConfig struct {
 	Secret     string
 	AccessTTL  string
 	RefreshTTL string
 	AppURL     string // base URL for email verification links, e.g. https://app.kreatip.id
+}
+
+type jwtClaims struct {
+	jwt.RegisteredClaims
+	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 type authUseCase struct {
@@ -229,14 +234,6 @@ func (u *authUseCase) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		AccessToken:  accessToken,
 		RefreshToken: rawRefresh,
 	}, nil
-}
-
-// -- JWT helpers --
-
-type jwtClaims struct {
-	jwt.RegisteredClaims
-	Email string `json:"email"`
-	Role  string `json:"role"`
 }
 
 func (u *authUseCase) generateAccessToken(user *entity.User) (string, error) {
