@@ -17,7 +17,8 @@ func Setup(app *fiber.App, ctrl *Controllers) {
 	auth.Post("/register", ctrl.Auth.Register)
 	auth.Post("/login", ctrl.Auth.Login)
 	auth.Post("/refresh", ctrl.Auth.Refresh)
-	auth.Post("/verify-email", ctrl.Auth.VerifyEmail)
+	auth.Get("/verify-email", ctrl.Auth.VerifyEmail)
+	auth.Post("/resend-verification", ctrl.Auth.ResendVerification)
 	auth.Post("/forgot-password", ctrl.Auth.ForgotPassword)
 	auth.Post("/reset-password", ctrl.Auth.ResetPassword)
 

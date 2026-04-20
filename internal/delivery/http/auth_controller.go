@@ -36,15 +36,36 @@ func (ctrl *AuthController) Register(c *fiber.Ctx) error {
 
 	resp, err := ctrl.UseCase.Register(c.UserContext(), req)
 	if err != nil {
-		return err // ErrorHandler yang map ke HTTP response
+		return err
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(model.WebResponse[*model.UserResponse]{Data: resp})
 }
 
-// POST /api/v1/auth/login
+// Login godoc
+// @Summary      Login user
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      model.LoginRequest  true  "Login payload"
+// @Success      200   {object}  model.WebResponse[model.AuthResponse]
+// @Failure      400   {object}  model.ErrorResponse
+// @Failure      401   {object}  model.ErrorResponse  "Invalid credentials"
+// @Failure      403   {object}  model.ErrorResponse  "Email not verified"
+// @Failure      422   {object}  model.ErrorResponse  "Validation error"
+// @Router       /auth/login [post]
 func (ctrl *AuthController) Login(c *fiber.Ctx) error {
-	return fiber.ErrNotImplemented
+	req := new(model.LoginRequest)
+	if err := c.BodyParser(req); err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	resp, err := ctrl.UseCase.Login(c.UserContext(), req)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(model.WebResponse[*model.AuthResponse]{Data: resp})
 }
 
 // POST /api/v1/auth/refresh
@@ -52,9 +73,46 @@ func (ctrl *AuthController) Refresh(c *fiber.Ctx) error {
 	return fiber.ErrNotImplemented
 }
 
-// POST /api/v1/auth/verify-email
+// VerifyEmail godoc
+// @Summary      Verify email address
+// @Tags         auth
+// @Param        token  query  string  true  "Verification token"
+// @Success      200    {object}  model.WebResponse[string]
+// @Failure      400    {object}  model.ErrorResponse  "Invalid or expired token"
+// @Router       /auth/verify-email [get]
 func (ctrl *AuthController) VerifyEmail(c *fiber.Ctx) error {
-	return fiber.ErrNotImplemented
+	token := c.Query("token")
+	if token == "" {
+		return fiber.ErrBadRequest
+	}
+
+	if err := ctrl.UseCase.VerifyEmail(c.UserContext(), token); err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(model.WebResponse[string]{Data: "email verified"})
+}
+
+// ResendVerification godoc
+// @Summary      Resend email verification
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body  model.ResendVerificationRequest  true  "Email"
+// @Success      200   {object}  model.WebResponse[string]
+// @Failure      422   {object}  model.ErrorResponse
+// @Router       /auth/resend-verification [post]
+func (ctrl *AuthController) ResendVerification(c *fiber.Ctx) error {
+	req := new(model.ResendVerificationRequest)
+	if err := c.BodyParser(req); err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if err := ctrl.UseCase.ResendVerification(c.UserContext(), req.Email); err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(model.WebResponse[string]{Data: "verification email sent"})
 }
 
 // POST /api/v1/auth/forgot-password

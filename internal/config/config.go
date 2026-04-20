@@ -15,6 +15,7 @@ type AppConfig struct {
 	Name string `mapstructure:"name"`
 	Port int    `mapstructure:"port"`
 	Env  string `mapstructure:"env"`
+	URL  string `mapstructure:"url"` // base URL for email links, e.g. http://localhost:8080
 }
 
 type DatabaseConfig struct {

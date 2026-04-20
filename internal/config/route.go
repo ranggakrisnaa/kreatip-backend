@@ -6,6 +6,8 @@ import (
 	fiberSwagger "github.com/gofiber/swagger"
 	handler "github.com/kreatip/kreatip-backend/internal/delivery/http"
 	"github.com/kreatip/kreatip-backend/internal/delivery/http/route"
+	emailgw "github.com/kreatip/kreatip-backend/internal/gateway/email"
+	gatewaymsg "github.com/kreatip/kreatip-backend/internal/gateway/messaging"
 	"github.com/kreatip/kreatip-backend/internal/repository"
 	"github.com/kreatip/kreatip-backend/internal/usecase/impl"
 	"github.com/redis/go-redis/v9"
@@ -23,14 +25,34 @@ type BootstrapConfig struct {
 	Config   *Config
 }
 
+func toEmailGWConfig(c *EmailConfig) *emailgw.Config {
+	return &emailgw.Config{
+		Provider: c.Provider,
+		APIKey:   c.APIKey,
+		From:     c.From,
+		SMTPHost: c.SMTPHost,
+		SMTPPort: c.SMTPPort,
+	}
+}
+
 // Bootstrap wires all layers: repository → usecase → controller → route.
 func Bootstrap(cfg *BootstrapConfig) {
 	// repositories
-	userRepo := repository.NewUserRepository(cfg.DB, cfg.Log)
-	walletRepo := repository.NewWalletRepository(cfg.DB, cfg.Log)
+	userRepo         := repository.NewUserRepository(cfg.DB, cfg.Log)
+	walletRepo       := repository.NewWalletRepository(cfg.DB, cfg.Log)
+	refreshTokenRepo := repository.NewRefreshTokenRepository(cfg.DB, cfg.Log)
+
+	// gateways
+	producer := gatewaymsg.NewProducer(cfg.Config.Redis.Addr, cfg.Log)
+	_ = emailgw.NewGateway(toEmailGWConfig(&cfg.Config.Email), cfg.Log) // used by worker
 
 	// usecases
-	authUC := impl.NewAuthUseCase(cfg.DB, cfg.Log, cfg.Validate, userRepo, walletRepo)
+	authUC := impl.NewAuthUseCase(cfg.DB, cfg.Log, cfg.Validate, impl.JWTConfig{
+		Secret:     cfg.Config.JWT.Secret,
+		AccessTTL:  cfg.Config.JWT.AccessTTL,
+		RefreshTTL: cfg.Config.JWT.RefreshTTL,
+		AppURL:     cfg.Config.App.URL,
+	}, producer, userRepo, walletRepo, refreshTokenRepo)
 
 	// controllers
 	authCtrl := handler.NewAuthController(authUC, cfg.Log)

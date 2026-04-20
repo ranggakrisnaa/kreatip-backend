@@ -9,6 +9,7 @@ import (
 type AuthUseCase interface {
 	Register(ctx context.Context, req *model.RegisterRequest) (*model.UserResponse, error)
 	VerifyEmail(ctx context.Context, token string) error
+	ResendVerification(ctx context.Context, email string) error
 	Login(ctx context.Context, req *model.LoginRequest) (*model.AuthResponse, error)
 	Refresh(ctx context.Context, refreshToken string) (*model.AuthResponse, error)
 	ForgotPassword(ctx context.Context, req *model.ForgotPasswordRequest) error
