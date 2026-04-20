@@ -21,5 +21,7 @@ func NewFiber(cfg *Config) *fiber.App {
 		AllowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 	}))
 
+	RegisterMetrics(app)
+
 	return app
 }

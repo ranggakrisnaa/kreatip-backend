@@ -12,7 +12,8 @@ import (
 type WalletRepository interface {
 	FindByUserID(ctx context.Context, userID string) (*entity.Wallet, error)
 	FindByUserIDForUpdate(ctx context.Context, userID string, tx *gorm.DB) (*entity.Wallet, error)
-	Create(ctx context.Context, wallet *entity.Wallet) error
+	// Create inserts a new wallet. Pass tx to run inside an existing transaction.
+	Create(ctx context.Context, wallet *entity.Wallet, tx *gorm.DB) error
 	Save(ctx context.Context, wallet *entity.Wallet) error
 	IncrementBalance(ctx context.Context, userID string, amount int64, tx *gorm.DB) error
 }
@@ -50,8 +51,12 @@ func (r *walletRepository) FindByUserIDForUpdate(ctx context.Context, userID str
 	return &w, nil
 }
 
-func (r *walletRepository) Create(ctx context.Context, wallet *entity.Wallet) error {
-	return r.DB.WithContext(ctx).Create(wallet).Error
+func (r *walletRepository) Create(ctx context.Context, wallet *entity.Wallet, tx *gorm.DB) error {
+	db := r.DB
+	if tx != nil {
+		db = tx
+	}
+	return db.WithContext(ctx).Create(wallet).Error
 }
 
 func (r *walletRepository) IncrementBalance(ctx context.Context, userID string, amount int64, tx *gorm.DB) error {

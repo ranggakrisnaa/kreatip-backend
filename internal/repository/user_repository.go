@@ -11,7 +11,8 @@ import (
 type UserRepository interface {
 	FindByID(ctx context.Context, id string) (*entity.User, error)
 	FindByEmail(ctx context.Context, email string) (*entity.User, error)
-	Create(ctx context.Context, user *entity.User) error
+	// Create inserts a new user. Pass tx to run inside an existing transaction.
+	Create(ctx context.Context, user *entity.User, tx *gorm.DB) error
 	Save(ctx context.Context, user *entity.User) error
 }
 
@@ -35,6 +36,10 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity
 	return &user, nil
 }
 
-func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
-	return r.DB.WithContext(ctx).Create(user).Error
+func (r *userRepository) Create(ctx context.Context, user *entity.User, tx *gorm.DB) error {
+	db := r.DB
+	if tx != nil {
+		db = tx
+	}
+	return db.WithContext(ctx).Create(user).Error
 }

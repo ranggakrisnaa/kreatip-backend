@@ -1,8 +1,27 @@
+// @title           Kreatip API
+// @version         1.0
+// @description     Donation platform for creators & streamers
+// @termsOfService  https://kreatip.id/terms
+
+// @contact.name   Kreatip Team
+// @contact.email  dev@kreatip.id
+
+// @license.name  MIT
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token. Example: "Bearer eyJ..."
+
 package main
 
 import (
 	"fmt"
 
+	_ "github.com/kreatip/kreatip-backend/docs" // swag generated docs
 	"github.com/kreatip/kreatip-backend/internal/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -41,6 +60,7 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", cfg.App.Port)
 	log.Infof("server listening on %s", addr)
+	log.Infof("swagger UI: http://localhost%s/docs/", addr)
 	if err := app.Listen(addr); err != nil {
 		log.Fatalf("server error: %v", err)
 	}

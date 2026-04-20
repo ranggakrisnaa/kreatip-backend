@@ -1,11 +1,13 @@
-APP_NAME    = kreatip-backend
+APP_NAME     = kreatip-backend
+DBDOCS_USER ?= kreatip
+GOBIN        = $(shell go env GOPATH)/bin
 BUILD_DIR   = bin
 MAIN_WEB    = cmd/web/main.go
 MAIN_WORKER = cmd/worker/main.go
 MIGRATE_URL = postgres://postgres:postgres@localhost:5432/kreatip?sslmode=disable
 MIGRATIONS  = db/migrations
 
-.PHONY: all run run-worker build build-worker deps install-tools lint test migrate-up migrate-down migrate-create clean docker-up docker-down
+.PHONY: all run run-worker build build-worker deps install-tools lint test migrate-up migrate-down migrate-create swag dbml dbdocs-login dbdocs-push dbdocs-open clean docker-up docker-down monitoring-up monitoring-open
 
 all: build
 
@@ -30,10 +32,12 @@ deps:
 	go mod download
 	go mod tidy
 
-## Install dev CLI tools (golang-migrate, golangci-lint)
+## Install dev CLI tools (golang-migrate, golangci-lint, dbdocs)
 install-tools:
 	go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+	go install github.com/swaggo/swag/cmd/swag@latest
 	@which golangci-lint > /dev/null || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin
+	@which dbdocs > /dev/null || npm install -g dbdocs
 
 ## Run linter (requires golangci-lint)
 lint:
@@ -67,6 +71,34 @@ docker-up:
 ## Stop Docker services
 docker-down:
 	docker compose down
+
+## Generate Swagger docs from annotations (run before build)
+swag:
+	$(GOBIN)/swag init -g cmd/web/main.go -o docs/ --parseDependency --parseInternal
+
+## Generate docs/schema.dbml from db/migrations/*.up.sql
+dbml:
+	go run ./cmd/dbml
+
+## Login to dbdocs.io (run once, stores token in ~/.dbdocs)
+dbdocs-login:
+	dbdocs login
+
+## Generate DBML then publish to dbdocs.io
+dbdocs-push: dbml
+	dbdocs build docs/schema.dbml --project kreatip
+
+## Open published dbdocs.io page in browser
+dbdocs-open:
+	open https://dbdocs.io/$(DBDOCS_USER)/kreatip
+
+## Start Prometheus + Grafana (requires app running on :8080)
+monitoring-up:
+	docker compose up -d prometheus grafana
+
+## Open Grafana in browser (admin/admin)
+monitoring-open:
+	open http://localhost:3000
 
 ## Clean build artifacts
 clean:
